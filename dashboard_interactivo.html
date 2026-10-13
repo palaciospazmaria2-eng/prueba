@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseDash - Dashboard Interactivo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js para gráficos interactivos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Configuración personalizada de Tailwind para soporte de modo oscuro -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.7);
+        }
+
+        /* Animación suave para tarjetas y tareas */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full flex flex-col transition-colors duration-300">
+
+    <!-- Navigation Bar -->
+    <nav class="sticky top-0 z-40 w-full border-b border-slate-200 dark:border-slate-800 glass">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                        PulseDash
+                    </span>
+                </div>
+
+                <!-- Clock & Actions -->
+                <div class="flex items-center gap-4">
+                    <!-- Reloj en vivo -->
+                    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <i data-lucide="clock" class="w-4 h-4 text-blue-500"></i>
+                        <span id="live-clock">00:00:00</span>
+                    </div>
+
+                    <!-- Botón Modo Oscuro/Claro -->
+                    <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500" title="Cambiar Tema">
+                        <i id="theme-toggle-dark-icon" class="w-5 h-5 hidden" data-lucide="moon"></i>
+                        <i id="theme-toggle-light-icon" class="w-5 h-5 hidden" data-lucide="sun"></i>
+                    </button>
+
+                    <!-- Avatar Usuario -->
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold shadow-md">
+                        JD
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+        <!-- Welcome Banner -->
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 sm:p-8 text-white shadow-xl">
+            <div class="relative z-10 max-w-2xl">
+                <h1 id="greeting" class="text-2xl sm:text-3xl font-bold tracking-tight mb-2">¡Hola de nuevo!</h1>
+                <p class="text-blue-100 text-sm sm:text-base">
+                    Aquí tienes el resumen interactivo de tus actividades y metas para el día de hoy.
+                </p>
+            </div>
+            <div class="absolute -right-10 -bottom-10 opacity-10 text-white pointer-events-none">
+                <i data-lucide="sparkles" class="w-64 h-64"></i>
+            </div>
+        </div>
+
+        <!-- Metrics Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Card 1: Contador Interactivo -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Contador de Puntos</span>
+                    <div class="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+                        <i data-lucide="zap" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span id="counter-value" class="text-3xl font-bold tracking-tight">0</span>
+                    <div class="flex items-center gap-1">
+                        <button id="counter-decrement" class="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition">
+                            <i data-lucide="minus" class="w-4 h-4"></i>
+                        </button>
+                        <button id="counter-increment" class="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-3">Haz clic para interactuar con el contador</p>
+            </div>
+
+            <!-- Card 2: Meta Completada -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Progreso Diario</span>
+                    <div class="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                        <i data-lucide="target" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold tracking-tight mb-2" id="tasks-progress-text">0%</div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                    <div id="tasks-progress-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Card 3: Ingresos -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Balance Proyectado</span>
+                    <div class="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                        <i data-lucide="wallet" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold tracking-tight">$<span id="balance-amount">3,450</span></div>
+                <div class="flex items-center gap-1 text-xs text-emerald-500 font-semibold mt-2">
+                    <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                    <span>+12.5% este mes</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Tareas Pendientes -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-slate-500 dark:text-slate-400">Tareas Pendientes</span>
+                    <div class="p-2 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
+                        <i data-lucide="check-square" class="w-5 h-5"></i>
+                    </div>
+                </div>
+                <div class="text-3xl font-bold tracking-tight" id="pending-tasks-count">0</div>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">Listas para ser completadas</p>
+            </div>
+        </div>
+
+        <!-- Main Interactive Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Column: Interactive Chart (2 cols wide) -->
+            <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700/50 shadow-sm flex flex-col">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold">Actividad Financiera Semanal</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Visualiza el rendimiento e interactúa cambiando la escala</p>
+                    </div>
+                    <!-- Chart Filter Buttons -->
+                    <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl">
+                        <button id="chart-filter-week" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 shadow-sm transition">Semana</button>
+                        <button id="chart-filter-month" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition">Mes</button>
+                    </div>
+                </div>
+
+                <!-- Canvas para Chart.js -->
+                <div class="flex-1 min-h-[280px] relative">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Right Column: Interactive Task Manager -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700/50 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold">Gestor de Tareas</h2>
+                    <span id="task-badge" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300">
+                        0 Activas
+                    </span>
+                </div>
+
+                <!-- Input para agregar nueva tarea -->
+                <form id="add-task-form" class="flex gap-2 mb-4">
+                    <input 
+                        type="text" 
+                        id="task-input" 
+                        placeholder="Nueva tarea..." 
+                        class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                        required
+                    >
+                    <button type="submit" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition flex items-center justify-center">
+                        <i data-lucide="plus" class="w-5 h-5"></i>
+                    </button>
+                </form>
+
+                <!-- Lista de Tareas -->
+                <div class="flex-1 overflow-y-auto max-h-[280px] space-y-2 pr-1" id="tasks-list">
+                    <!-- Las tareas se insertan dinámicamente con JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Extra Interactive Widget: Quick Goal Calculator -->
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700/50 shadow-sm">
+            <h2 class="text-lg font-bold mb-2">Simulador de Ahorro Rápido</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">Ajusta los deslizadores para calcular tu ahorro proyectado.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <!-- Slider 1 -->
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-2">
+                        <span>Ahorro Mensual:</span>
+                        <span class="text-blue-600 font-bold">$<span id="monthly-val">200</span></span>
+                    </div>
+                    <input type="range" id="monthly-slider" min="50" max="1000" step="50" value="200" class="w-full accent-blue-600 cursor-pointer">
+                </div>
+
+                <!-- Slider 2 -->
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-2">
+                        <span>Plazo (Meses):</span>
+                        <span class="text-blue-600 font-bold"><span id="months-val">12</span> meses</span>
+                    </div>
+                    <input type="range" id="months-slider" min="1" max="36" step="1" value="12" class="w-full accent-blue-600 cursor-pointer">
+                </div>
+
+                <!-- Output Box -->
+                <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
+                    <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Ahorrado Proyectado</span>
+                    <div class="text-2xl font-extrabold text-emerald-500 mt-1">$<span id="total-savings">2,400</span></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Script de Funcionalidad Interactiva -->
+    <script>
+        // === 1. MODO OSCURO / CLARO ===
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                lightIcon.classList.remove('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                darkIcon.classList.remove('hidden');
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                showToast('Modo Claro activado ☀️');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                showToast('Modo Oscuro activado 🌙');
+            }
+            updateChartColors();
+        });
+
+        // === 2. RELOJ EN VIVO & SALUDO ===
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('live-clock').textContent = now.toLocaleTimeString();
+
+            // Saludo dinámico según la hora
+            const hours = now.getHours();
+            const greetingEl = document.getElementById('greeting');
+            if (hours < 12) greetingEl.textContent = '¡Buenos días! ☀️';
+            else if (hours < 18) greetingEl.textContent = '¡Buenas tardes! 🌤️';
+            else greetingEl.textContent = '¡Buenas noches! 🌙';
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // === 3. CONTADOR INTERACTIVO ===
+        let counterValue = 0;
+        const counterEl = document.getElementById('counter-value');
+        document.getElementById('counter-increment').addEventListener('click', () => {
+            counterValue++;
+            counterEl.textContent = counterValue;
+        });
+        document.getElementById('counter-decrement').addEventListener('click', () => {
+            if (counterValue > 0) counterValue--;
+            counterEl.textContent = counterValue;
+        });
+
+        // === 4. GESTOR DE TAREAS INTERACTIVO ===
+        let tasks = [
+            { id: 1, text: 'Revisar métricas semanales', completed: true },
+            { id: 2, text: 'Diseñar interfaz responsiva', completed: false },
+            { id: 3, text: 'Optimizar código JavaScript', completed: false }
+        ];
+
+        const taskForm = document.getElementById('add-task-form');
+        const taskInput = document.getElementById('task-input');
+        const tasksList = document.getElementById('tasks-list');
+
+        function renderTasks() {
+            tasksList.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                tasksList.innerHTML = `<p class="text-xs text-center text-slate-400 py-6">¡No hay tareas! Agrega una arriba.</p>`;
+            }
+
+            tasks.forEach(task => {
+                const taskDiv = document.createElement('div');
+                taskDiv.className = `flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/50 fade-in group transition-all`;
+                
+                taskDiv.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <input 
+                            type="checkbox" 
+                            ${task.completed ? 'checked' : ''} 
+                            onchange="toggleTask(${task.id})"
+                            class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-slate-300 cursor-pointer"
+                        >
+                        <span class="text-sm ${task.completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200'}">
+                            ${escapeHtml(task.text)}
+                        </span>
+                    </div>
+                    <button onclick="deleteTask(${task.id})" class="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-1">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                tasksList.appendChild(taskDiv);
+            });
+
+            lucide.createIcons();
+            updateMetrics();
+        }
+
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = taskInput.value.trim();
+            if (text) {
+                tasks.push({ id: Date.now(), text: text, completed: false });
+                taskInput.value = '';
+                renderTasks();
+                showToast('Tarea agregada exitosamente ✅');
+            }
+        });
+
+        window.toggleTask = function(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            renderTasks();
+        };
+
+        window.deleteTask = function(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+            showToast('Tarea eliminada 🗑️');
+        };
+
+        function updateMetrics() {
+            const completed = tasks.filter(t => t.completed).length;
+            const total = tasks.length;
+            const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+            document.getElementById('tasks-progress-text').textContent = `${percent}%`;
+            document.getElementById('tasks-progress-bar').style.width = `${percent}%`;
+            document.getElementById('pending-tasks-count').textContent = total - completed;
+            document.getElementById('task-badge').textContent = `${total - completed} Activas`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // === 5. CALCULADORA DE AHORROS (SIMULADOR) ===
+        const monthlySlider = document.getElementById('monthly-slider');
+        const monthsSlider = document.getElementById('months-slider');
+        const monthlyVal = document.getElementById('monthly-val');
+        const monthsVal = document.getElementById('months-val');
+        const totalSavings = document.getElementById('total-savings');
+
+        function updateSavings() {
+            const m = parseInt(monthlySlider.value);
+            const t = parseInt(monthsSlider.value);
+            monthlyVal.textContent = m.toLocaleString();
+            monthsVal.textContent = t;
+            totalSavings.textContent = (m * t).toLocaleString();
+        }
+
+        monthlySlider.addEventListener('input', updateSavings);
+        monthsSlider.addEventListener('input', updateSavings);
+
+        // === 6. NOTIFICACIONES TOAST ===
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 fade-in pointer-events-auto';
+            toast.innerHTML = `<span>${message}</span>`;
+            
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // === 7. GRÁFICO CON CHART.JS ===
+        let myChart;
+        const ctx = document.getElementById('activityChart').getContext('2d');
+
+        const weekData = {
+            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            datasets: [{
+                label: 'Ingresos ($)',
+                data: [320, 450, 280, 600, 750, 900, 650],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        };
+
+        const monthData = {
+            labels: ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'],
+            datasets: [{
+                label: 'Ingresos ($)',
+                data: [1800, 2400, 2100, 3450],
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        };
+
+        function initChart() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: weekData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        y: {
+                            ticks: { color: textColor },
+                            grid: { color: gridColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartColors() {
+            if (!myChart) return;
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+            myChart.options.scales.x.ticks.color = textColor;
+            myChart.options.scales.x.grid.color = gridColor;
+            myChart.options.scales.y.ticks.color = textColor;
+            myChart.options.scales.y.grid.color = gridColor;
+            myChart.update();
+        }
+
+        // Filtros de gráfico
+        const btnWeek = document.getElementById('chart-filter-week');
+        const btnMonth = document.getElementById('chart-filter-month');
+
+        btnWeek.addEventListener('click', () => {
+            myChart.data = weekData;
+            myChart.update();
+            btnWeek.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 shadow-sm transition";
+            btnMonth.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition";
+        });
+
+        btnMonth.addEventListener('click', () => {
+            myChart.data = monthData;
+            myChart.update();
+            btnMonth.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 shadow-sm transition";
+            btnWeek.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition";
+        });
+
+        // INICIALIZACIÓN
+        window.onload = () => {
+            initTheme();
+            renderTasks();
+            initChart();
+            lucide.createIcons();
+        };
+    </script>
+</body>
+</html>
